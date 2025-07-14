@@ -1,0 +1,20 @@
+name = "WiringDiagramAlgebras"
+uuid = "bf042221-8e53-4122-b78f-919143428d38"
+authors = ["Richard Samuelson <samuelson.rick@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
+Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
+CliqueTrees = "60701a23-6482-424a-84db-faee86b9b1f8"
+FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[compat]
+AbstractTrees = "0.4.5"
+ArgCheck = "2.5.0"
+Catlab = "0.16.20"
+CliqueTrees = "1.7.4"
+FillArrays = "1.13.0"
+SparseArrays = "1.11.0"
