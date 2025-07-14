@@ -1,6 +1,4 @@
-using ArgCheck
-
-abstract type WiringDiagramAlgebra{T} end
+abstract type WiringDiagramAlgebra{A, T} end
 
 """
     combine(algebra, cod, dom1, dom2, map1, map2, arg1, arg2)
@@ -12,6 +10,7 @@ Let T be the operad of typed wiring diagrams. The arguments
     - `dom3`
     - `map1`
     - `map2`
+    - `typ3`
 
 specify a morphism D: dom1, dom2 → dom3 in T.
 
@@ -37,16 +36,7 @@ This function computes the following element.
 
    algebra(D)(arg1, arg2) ∈ algebra(dom3)
 """
-combine(
-    algebra::WiringDiagramAlgebra{T},
-    dom1::Integer,
-    dom2::Integer,
-    dom3::Integer,
-    map1::AbstractVector,
-    map2::AbstractVector,
-    arg1::T,
-    arg2::T,
-) where {T}
+combine(algebra, dom1, dom2, dom3, map1, map2, arg1, arg2, typ3)
 
 """
     project(algebra, dom1, dom2, map2, arg1)
@@ -56,6 +46,7 @@ Let T be the operad of typed wiring diagrams. The arguments
     - `dom1`
     - `dom2`
     - `map2`
+    - `typ1`
 
 specify a morphism D: dom1 → dom2 in T.
 
@@ -79,10 +70,4 @@ This function computes the following element.
 
    algebra(D)(arg1) ∈ algebra(dom2)
 """
-project(
-    algebra::WiringDiagramAlgebra{T},
-    dom1::Integer,
-    dom2::Integer,
-    map2::AbstractVector,
-    arg1::T,
-)
+project(algebra, dom1, dom2, map2, arg1, typ1)

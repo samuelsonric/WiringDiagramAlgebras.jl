@@ -1,9 +1,14 @@
 module WiringDiagramAlgebras
 
+using AbstractTrees
 using ArgCheck
-using Catlab: UndirectedWiringDiagram, nparts
+using Base: oneto
+using Catlab: UndirectedWiringDiagram, TypedRelationDiagram, nparts
 using CliqueTrees
+using CliqueTrees: EliminationAlgorithm, DEFAULT_ELIMINATION_ALGORITHM, cliquetree!, nov
+using CliqueTrees.Utilities
 using FillArrays
+using Graphs
 using SparseArrays
 
 export ClusterTree, WiringDiagramAlgebra, MatrixAlgebra, apply

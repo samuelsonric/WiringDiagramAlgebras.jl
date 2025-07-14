@@ -1,4 +1,5 @@
-struct ClusterTree
+struct ClusterTree{T}
+    types::Vector{T}
     root::Int
     VN::CliqueTree{Int, Int}                               # node → vertex
     VB::BipartiteGraph{Int, Int, Vector{Int}, Vector{Int}} # box  → vertex
@@ -18,19 +19,20 @@ function ClusterTree(weights::AbstractVector, diagram::UndirectedWiringDiagram; 
     V = nparts(diagram, :Junction)
     
     static = StaticWiringDiagram(diagram)
-    VB = static.graph; BV = reverse(VB)
+    types = static.types; VB = static.graph; BV = reverse(VB)
     
     matrix = sparse(BV)
     VV = BipartiteGraph(matrix' * matrix)
 
     perm, VN = cliquetree(weights, VV; alg)
     invp = invperm(perm); N = length(VN)
+    permute!(types, perm)
 
     for p in oneto(P1 + P2)
         j = VB.tgt[p]
         VB.tgt[p] = invp[j]
     end
-    
+
     root = 0; v = minimum(neighbors(VB, B))
     
     for (j, bag) in enumerate(VN)
@@ -42,7 +44,8 @@ function ClusterTree(weights::AbstractVector, diagram::UndirectedWiringDiagram; 
     
     perm = cliquetree!(VN, root)
     invp = invperm(perm)
-    
+    permute!(types, perm)    
+
     for p in oneto(P1 + P2)
         j = VB.tgt[p]
         VB.tgt[p] = invp[j]
@@ -63,10 +66,11 @@ function ClusterTree(weights::AbstractVector, diagram::UndirectedWiringDiagram; 
 
     root = tgt[B]
     NB = BipartiteGraph(N, B, B, oneto(B + 1), tgt); BN = reverse(NB)
-    return ClusterTree(root, VN, VB, BN)
+    return ClusterTree(types, root, VN, VB, BN)
 end
 
-function apply(algebra::WiringDiagramAlgebra{T}, tree::ClusterTree, args) where {T}
+function apply(algebra::WiringDiagramAlgebra{A, T}, tree::ClusterTree{T}, args) where {A, T}
+    types = tree.types
     root = tree.root
     VN = tree.VN
     VB = tree.VB
@@ -77,10 +81,11 @@ function apply(algebra::WiringDiagramAlgebra{T}, tree::ClusterTree, args) where 
     B = nov(BN)
     V = nov(VB)
     
-    num = 0; stack = Vector{Tuple{Int, T}}(undef, N)
+    num = 0; stack = Vector{Tuple{Int, A}}(undef, N)
     
     query = neighbors(VB, B)
 
+    typ3 = Vector{T}(undef, W)
     map2 = Vector{Int}(undef, W)
     prj3 = Vector{Int}(undef, V)
     prj4 = Vector{Int}(undef, V)
@@ -91,8 +96,8 @@ function apply(algebra::WiringDiagramAlgebra{T}, tree::ClusterTree, args) where 
     end
     
     for n in oneto(N)
-        num = apply_collect_impl!(algebra, VN, VB, BN, stack,
-            query, marker, map2, prj3, prj4, root, num, n)
+        num = apply_collect_impl!(algebra, types, VN, VB, BN, args,
+            stack, query, marker, typ3, map2, prj3, prj4, root, num, n)
     end
     
     # The variable `arg1` is an element of the set W1.
@@ -107,27 +112,30 @@ function apply(algebra::WiringDiagramAlgebra{T}, tree::ClusterTree, args) where 
         #     W2 := algebra(w2)
         #
         n, arg2 = stack[num]; num -= 1
-        w1, arg1 = apply_combine_impl!(algebra, query, arg1, arg2, root, w1, n)
+        w1, arg1 = apply_combine_impl!(algebra, types, query, typ3, arg1, arg2, root, w1, n)
     end
 
     return arg1
 end
 
 function apply_collect_impl!(
-        algebra::WiringDiagramAlgebra{T},
+        algebra::WiringDiagramAlgebra{A, T},
+        types::AbstractVector{T},
         VN::CliqueTree{Int, Int},
         VB::BipartiteGraph{Int, Int},
         BN::BipartiteGraph{Int, Int},
-        stack::AbstractVector{Tuple{Int, T}},
+        args,
+        stack::AbstractVector{Tuple{Int, A}},
         query::AbstractVector{Int},
         marker::AbstractVector{Int},
+        typ3::AbstractVector{T},
         map2::AbstractVector{Int},
         prj3::AbstractVector{Int},
         prj4::AbstractVector{Int},
         root::Int,
         num::Int,
         n::Int,
-    ) where {T}
+    ) where {A, T}
     B = nv(VB)
     
     # The variables
@@ -161,8 +169,8 @@ function apply_collect_impl!(
         if b < B
             inj2 = neighbors(VB, b); arg2 = args[b]
             
-            w1, arg1 = apply_collect_combine_impl!(algebra,
-                marker, map2, inj2, prj3, arg1, arg2, w1, n)
+            w1, arg1 = apply_collect_combine_impl!(algebra, types,
+                marker, typ3, map2, inj2, prj3, arg1, arg2, w1, n)
         end
     end
 
@@ -173,8 +181,8 @@ function apply_collect_impl!(
 
         num -= 1; inj2 = separator(VN, nn)
         
-        w1, arg1 = apply_collect_combine_impl!(algebra,
-            marker, map2, inj2, prj3, arg1, arg2, w1, n)
+        w1, arg1 = apply_collect_combine_impl!(algebra, types,
+            marker, typ3, map2, inj2, prj3, arg1, arg2, w1, n)
     end
 
     # The variables
@@ -237,22 +245,24 @@ function apply_collect_impl!(
     #
     #     arg2 = algebra(D)(arg1)
     #
-    arg2 = project(algebra, w1, w2, map2, arg1)    
+    arg2 = project(algebra, w1, w2, map2, arg1, typ3)::A
     num += 1; stack[num] = (n, arg2)
     return num
 end
 
 function apply_collect_combine_impl!(
-        algebra::WiringDiagramAlgebra{T},
+        algebra::WiringDiagramAlgebra{A, T},
+        types::AbstractVector{T},
         marker::AbstractVector{Int},
+        typ3::AbstractVector{T},
         map2::AbstractVector{Int},
         inj2::AbstractVector{Int},
         prj3::AbstractVector{Int},
-        arg1::Union{T, Nothing},
-        arg2::T,
+        arg1::Union{A, Nothing},
+        arg2::A,
         w1::Int,
         n::Int,
-    ) where {T}
+    ) where {A, T}
     # The variables
     #
     #     - `w2`
@@ -279,7 +289,7 @@ function apply_collect_combine_impl!(
     for v in inj2
         if marker[v] < n
             marker[v] = n
-            w3 += 1; prj3[v] = w3
+            w3 += 1; prj3[v] = w3; typ3[w3] = types[v]
         end
 
         w2 += 1; map2[w2] = prj3[v]
@@ -324,21 +334,23 @@ function apply_collect_combine_impl!(
     if isnothing(arg1)
         arg3 = arg2
     else
-        arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2)
+        arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2, typ3)::A
     end
 
     return w3, arg3
 end
 
 function apply_combine_impl!(
-        algebra::WiringDiagramAlgebra{T},
+        algebra::WiringDiagramAlgebra{A, T},
+        types::AbstractVector{T},
         query::AbstractVector{Int},
-        arg1::Union{T, Nothing},
-        arg2::T,
+        typ3::AbstractVector{T},
+        arg1::Union{A, Nothing},
+        arg2::A,
         root::Int,
         w1::Int,
         n::Int,
-    ) where {T}
+    ) where {A, T}
     
     # Let T be the operad of typed wiring diagrams. The variables
     #
@@ -374,10 +386,12 @@ function apply_combine_impl!(
     #
     #     arg3 = algebra(D)(arg1, arg2)
     #
+    w2 = 0
+
     if n == root
-        w2 = length(query)
-    else
-        w2 = 0
+        for v in query
+            w2 += 1; typ3[w2] = types[v]
+        end
     end
     
     map1 = oneto(w1)
@@ -387,7 +401,7 @@ function apply_combine_impl!(
     if isnothing(arg1)
         arg3 = arg2
     else
-        arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2)
+        arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2, typ3)::A
     end
 
     return w3, arg3
