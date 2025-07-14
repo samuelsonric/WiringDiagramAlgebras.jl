@@ -93,3 +93,8 @@ function project(
     arg2 = reshape(arr2, length(arr2))
     return arg2
 end
+
+function unit(algebra::MatrixAlgebra{T}) where {T}
+    x = one(T); arg = [x]
+    return arg
+end

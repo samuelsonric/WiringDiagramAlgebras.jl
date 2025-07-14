@@ -104,7 +104,7 @@ function apply(algebra::WiringDiagramAlgebra{A, T}, tree::ClusterTree{T}, args) 
     #
     #     W1 := algebra(w1)
     #
-    w1 = 0; arg1 = nothing
+    w1 = 0; arg1 = unit(algebra)::A
     
     while ispositive(num)
         # The variable `arg2` is an element of the set W2.
@@ -163,7 +163,7 @@ function apply_collect_impl!(
     #
     #     W1 := algebra(w1)
     #
-    w1 = w3 = 0; arg1 = nothing
+    w1 = w3 = 0; arg1 = unit(algebra)::A
 
     for b in neighbors(BN, n)
         if b < B
@@ -258,7 +258,7 @@ function apply_collect_combine_impl!(
         map2::AbstractVector{Int},
         inj2::AbstractVector{Int},
         prj3::AbstractVector{Int},
-        arg1::Union{A, Nothing},
+        arg1::A,
         arg2::A,
         w1::Int,
         n::Int,
@@ -330,13 +330,7 @@ function apply_collect_combine_impl!(
     #     arg3 = algebra(D)(arg1, arg2)
     #
     map1 = oneto(w1)
-    
-    if isnothing(arg1)
-        arg3 = arg2
-    else
-        arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2, typ3)::A
-    end
-
+    arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2, typ3)::A
     return w3, arg3
 end
 
@@ -345,7 +339,7 @@ function apply_combine_impl!(
         types::AbstractVector{T},
         query::AbstractVector{Int},
         typ3::AbstractVector{T},
-        arg1::Union{A, Nothing},
+        arg1::A,
         arg2::A,
         root::Int,
         w1::Int,
@@ -398,11 +392,6 @@ function apply_combine_impl!(
     map2 = oneto(w2)
     w3 = max(w1, w2)
     
-    if isnothing(arg1)
-        arg3 = arg2
-    else
-        arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2, typ3)::A
-    end
-
+    arg3 = combine(algebra, w1, w2, w3, map1, map2, arg1, arg2, typ3)::A
     return w3, arg3
 end

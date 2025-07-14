@@ -71,3 +71,7 @@ This function computes the following element.
    algebra(D)(arg1) ∈ algebra(dom2)
 """
 project(algebra, dom1, dom2, map2, arg1, typ1)
+
+"""
+"""
+unit(algebra)
